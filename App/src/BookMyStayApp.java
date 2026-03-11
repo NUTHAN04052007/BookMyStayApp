@@ -1,20 +1,18 @@
 /**
- * MAIN CLASS - BookMyStayAPp
+ * MAIN CLASS - BookMyStayApp
  *
- * Use Case 2: Basic Room Types & Static Availability
+ * Use Case 4: Room Search & Availability Check
  *
  * Description:
- * This class demonstrates room initialization
- * using domain models before introducing
- * centralized inventory management.
+ * This class demonstrates how guests
+ * can view available rooms without
+ * modifying inventory data.
  *
- * Availability is represented using
- * simple variables to highlight limitations.
+ * The system enforces read-only access
+ * by design and usage discipline.
  *
- * @author RishikaRaj
- * @version 2.1
+ * @version 4.0
  */
-
 public class BookMyStayApp {
 
     /**
@@ -24,31 +22,23 @@ public class BookMyStayApp {
      */
     public static void main(String[] args) {
 
-        System.out.println("Hotel Room Initialization\n");
-
         // Create room objects
         Room singleRoom = new SingleRoom();
         Room doubleRoom = new DoubleRoom();
         Room suiteRoom = new SuiteRoom();
 
-        // Static availability variables
-        int singleAvailable = 5;
-        int doubleAvailable = 3;
-        int suiteAvailable = 2;
+        // Initialize inventory
+        RoomInventory inventory = new RoomInventory();
 
-        // Display Single Room
-        System.out.println("Single Room:");
-        singleRoom.displayRoomDetails();
-        System.out.println("Available: " + singleAvailable + "\n");
+        // Initialize search service
+        RoomSearchService searchService = new RoomSearchService();
 
-        // Display Double Room
-        System.out.println("Double Room:");
-        doubleRoom.displayRoomDetails();
-        System.out.println("Available: " + doubleAvailable + "\n");
-
-        // Display Suite Room
-        System.out.println("Suite Room:");
-        suiteRoom.displayRoomDetails();
-        System.out.println("Available: " + suiteAvailable);
+        // Perform room search
+        searchService.searchAvailableRooms(
+                inventory,
+                singleRoom,
+                doubleRoom,
+                suiteRoom
+        );
     }
 }
