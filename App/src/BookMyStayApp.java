@@ -1,37 +1,57 @@
 /**
  * MAIN CLASS - BookMyStayApp
  *
- * Use Case 10: Booking Cancellation & Inventory Rollback
+ * Use Case 11: Concurrent Booking Simulation
  *
- * @version 10.0
+ * @version 11.0
  */
 public class BookMyStayApp {
 
     public static void main(String[] args) {
 
-        System.out.println("Booking Cancellation\n");
+        System.out.println("Concurrent Booking Simulation\n");
 
-        // Initialize inventory
+        // Shared components
         RoomInventory inventory = new RoomInventory();
+        BookingRequestQueue bookingQueue = new BookingRequestQueue();
+        RoomAllocationService allocationService = new RoomAllocationService();
 
-        // Initialize cancellation service
-        CancellationService cancellationService = new CancellationService();
+        // Add booking requests
+        bookingQueue.addRequest(new Reservation("Abhi", "Single Room"));
+        bookingQueue.addRequest(new Reservation("Subha", "Single Room"));
+        bookingQueue.addRequest(new Reservation("Vanmathi", "Double Room"));
+        bookingQueue.addRequest(new Reservation("Kural", "Suite Room"));
 
-        // Simulate confirmed booking (from UC6)
-        String reservationId = "Single Room-1";
-        String roomType = "Single Room";
+        // Create threads
+        Thread t1 = new Thread(
+                new ConcurrentBookingProcessor(bookingQueue, inventory, allocationService)
+        );
 
-        // Register booking
-        cancellationService.registerBooking(reservationId, roomType);
+        Thread t2 = new Thread(
+                new ConcurrentBookingProcessor(bookingQueue, inventory, allocationService)
+        );
 
-        // Cancel booking
-        cancellationService.cancelBooking(reservationId, inventory);
+        // Start threads
+        t1.start();
+        t2.start();
 
-        // Show rollback history
-        cancellationService.showRollbackHistory();
+        try {
+            t1.join();
+            t2.join();
+        } catch (InterruptedException e) {
+            System.out.println("Thread execution interrupted.");
+        }
 
-        // Show updated inventory
-        System.out.println("\nUpdated Single Room Availability: " +
+        // Show remaining inventory
+        System.out.println("\nRemaining Inventory:");
+
+        System.out.println("Single Room: " +
                 inventory.getRoomAvailability().get("Single Room"));
+
+        System.out.println("Double Room: " +
+                inventory.getRoomAvailability().get("Double Room"));
+
+        System.out.println("Suite Room: " +
+                inventory.getRoomAvailability().get("Suite Room"));
     }
 }
