@@ -1,44 +1,35 @@
 /**
  * MAIN CLASS - BookMyStayApp
  *
- * Use Case 6: Reservation Confirmation & Room Allocation
+ * Use Case 7: Add-On Service Selection
  *
- * Description:
- * This class demonstrates how booking
- * requests are confirmed and rooms
- * are allocated safely.
- *
- * It consumes booking requests in FIFO
- * order and updates inventory immediately.
- *
- * @version 6.0
+ * @version 7.0
  */
 public class BookMyStayApp {
 
     public static void main(String[] args) {
 
-        System.out.println("Room Allocation Processing\n");
+        System.out.println("Add-On Service Selection\n");
 
-        // Initialize inventory
-        RoomInventory inventory = new RoomInventory();
+        // Example reservation ID (from UC6)
+        String reservationId = "Single-1";
 
-        // Initialize booking queue
-        BookingRequestQueue bookingQueue = new BookingRequestQueue();
+        // Create service manager
+        AddOnServiceManager serviceManager = new AddOnServiceManager();
 
-        // Create booking requests
-        bookingQueue.addRequest(new Reservation("Abhi", "Single"));
-        bookingQueue.addRequest(new Reservation("Subha", "Single"));
-        bookingQueue.addRequest(new Reservation("Vanmathi", "Suite"));
+        // Create services
+        AddOnService food = new AddOnService("Food", 1000.0);
+        AddOnService spa = new AddOnService("Spa", 500.0);
 
-        // Allocation service
-        RoomAllocationService allocationService = new RoomAllocationService();
+        // Attach services
+        serviceManager.addService(reservationId, food);
+        serviceManager.addService(reservationId, spa);
 
-        // Process queue in FIFO order
-        while (bookingQueue.hasPendingRequests()) {
+        // Calculate total cost
+        double totalCost =
+                serviceManager.calculateTotalServiceCost(reservationId);
 
-            Reservation reservation = bookingQueue.getNextRequest();
-
-            allocationService.allocateRoom(reservation, inventory);
-        }
+        System.out.println("Reservation ID: " + reservationId);
+        System.out.println("Total Add-On Cost: " + totalCost);
     }
 }
