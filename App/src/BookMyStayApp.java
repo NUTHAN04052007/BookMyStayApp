@@ -1,49 +1,37 @@
-import java.util.Scanner;
-
 /**
  * MAIN CLASS - BookMyStayApp
  *
- * Use Case 9: Error Handling & Validation
+ * Use Case 10: Booking Cancellation & Inventory Rollback
  *
- * @version 9.0
+ * @version 10.0
  */
 public class BookMyStayApp {
 
     public static void main(String[] args) {
 
-        System.out.println("Booking Validation\n");
+        System.out.println("Booking Cancellation\n");
 
-        Scanner scanner = new Scanner(System.in);
-
-        // Initialize components
+        // Initialize inventory
         RoomInventory inventory = new RoomInventory();
-        ReservationValidator validator = new ReservationValidator();
-        BookingRequestQueue bookingQueue = new BookingRequestQueue();
 
-        try {
-            // Take input
-            System.out.print("Enter guest name: ");
-            String guestName = scanner.nextLine();
+        // Initialize cancellation service
+        CancellationService cancellationService = new CancellationService();
 
-            System.out.print("Enter room type (Single Room/Double Room/Suite Room): ");
-            String roomType = scanner.nextLine();
+        // Simulate confirmed booking (from UC6)
+        String reservationId = "Single Room-1";
+        String roomType = "Single Room";
 
-            // Validate input
-            validator.validate(guestName, roomType, inventory);
+        // Register booking
+        cancellationService.registerBooking(reservationId, roomType);
 
-            // If valid → add to queue
-            Reservation reservation = new Reservation(guestName, roomType);
-            bookingQueue.addRequest(reservation);
+        // Cancel booking
+        cancellationService.cancelBooking(reservationId, inventory);
 
-            System.out.println("Booking request added successfully.");
+        // Show rollback history
+        cancellationService.showRollbackHistory();
 
-        } catch (InvalidBookingException e) {
-
-            // Handle validation errors
-            System.out.println("Booking failed: " + e.getMessage());
-
-        } finally {
-            scanner.close();
-        }
+        // Show updated inventory
+        System.out.println("\nUpdated Single Room Availability: " +
+                inventory.getRoomAvailability().get("Single Room"));
     }
 }
