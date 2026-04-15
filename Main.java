@@ -1,81 +1,75 @@
-// UC11: Concurrent Booking Simulation
+// UC12: Data Persistence & System Recovery
 // BookMyStay App
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-class Room {
-    private String roomNumber;
-    private String roomType;
-    private boolean available;
-
-    public Room(String num, String type) {
-        roomNumber=num; roomType=type; available=true;
-    }
-    public String getRoomNumber() { return roomNumber; }
-    public String getRoomType() { return roomType; }
-    public synchronized boolean isAvailable() { return available; }
-    public synchronized void setAvailable(boolean v) { available=v; }
-}
-
-class SharedInventory {
-    private List<Room> rooms = new ArrayList<>();
-
-    public SharedInventory() {
-        rooms.add(new Room("101", "Single"));
-        rooms.add(new Room("102", "Single"));
-        rooms.add(new Room("201", "Double"));
-    }
-
-    public synchronized Room findAndBook(String type, String guest) {
-        for (Room r : rooms) {
-            if (r.getRoomType().equalsIgnoreCase(type) && r.isAvailable()) {
-                r.setAvailable(false);
-                System.out.println(Thread.currentThread().getName() + ": " + guest + " booked room " + r.getRoomNumber());
-                return r;
-            }
-        }
-        System.out.println(Thread.currentThread().getName() + ": " + guest + " - No room available!");
-        return null;
-    }
-
-    public void displayStatus() {
-        System.out.println("\n=== Room Status ===");
-        for (Room r : rooms)
-            System.out.println(r.getRoomNumber() + " - " + (r.isAvailable() ? "Available" : "Occupied"));
-    }
-}
-
-class BookingThread extends Thread {
-    private SharedInventory inventory;
+class BookingRecord implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private String bookingId;
     private String guestName;
     private String roomType;
+    private int nights;
+    private double totalCost;
+    private String status;
 
-    public BookingThread(SharedInventory inv, String guest, String type) {
-        inventory=inv; guestName=guest; roomType=type;
+    public BookingRecord(String id, String guest, String type, int nights, double cost) {
+        this.bookingId=id; this.guestName=guest; this.roomType=type;
+        this.nights=nights; this.totalCost=cost; this.status="CONFIRMED";
     }
 
-    @Override
-    public void run() {
-        try {
-            Thread.sleep((long)(Math.random()*100));
-        } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-        inventory.findAndBook(roomType, guestName);
+    public void display() {
+        System.out.println("ID: " + bookingId + " | Guest: " + guestName
+                + " | " + roomType + " x" + nights + " | Rs." + totalCost + " | " + status);
+    }
+}
+
+class DataPersistenceManager {
+    private static final String FILE = "bookings.dat";
+
+    public static void save(List<BookingRecord> records) {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE))) {
+            oos.writeObject(records);
+            System.out.println("Data saved to " + FILE);
+        } catch (IOException e) {
+            System.out.println("Save failed: " + e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static List<BookingRecord> load() {
+        File f = new File(FILE);
+        if (!f.exists()) {
+            System.out.println("No existing data found. Starting fresh.");
+            return new ArrayList<>();
+        }
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(FILE))) {
+            List<BookingRecord> records = (List<BookingRecord>) ois.readObject();
+            System.out.println("Recovered " + records.size() + " booking(s) from " + FILE);
+            return records;
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Recovery failed: " + e.getMessage());
+            return new ArrayList<>();
+        }
     }
 }
 
 public class Main {
-    public static void main(String[] args) throws InterruptedException {
-        SharedInventory inventory = new SharedInventory();
+    public static void main(String[] args) {
+        // Create and save bookings
+        List<BookingRecord> bookings = new ArrayList<>();
+        bookings.add(new BookingRecord("BK001", "Alice", "Suite", 3, 15000.0));
+        bookings.add(new BookingRecord("BK002", "Bob", "Single", 2, 3000.0));
+        bookings.add(new BookingRecord("BK003", "Charlie", "Double", 1, 2500.0));
 
-        Thread t1 = new BookingThread(inventory, "Alice", "Single");
-        Thread t2 = new BookingThread(inventory, "Bob", "Single");
-        Thread t3 = new BookingThread(inventory, "Charlie", "Single");
-        Thread t4 = new BookingThread(inventory, "Diana", "Double");
+        System.out.println("=== Saving bookings ===");
+        for (BookingRecord r : bookings) r.display();
+        DataPersistenceManager.save(bookings);
 
-        t1.start(); t2.start(); t3.start(); t4.start();
-        t1.join(); t2.join(); t3.join(); t4.join();
-
-        inventory.displayStatus();
+        System.out.println("\n=== System Recovery ===");
+        List<BookingRecord> recovered = DataPersistenceManager.load();
+        System.out.println("Recovered bookings:");
+        for (BookingRecord r : recovered) r.display();
     }
 }
