@@ -1,4 +1,4 @@
-// UC10: Booking Cancellation & Inventory Rollback
+// UC11: Concurrent Booking Simulation
 // BookMyStay App
 
 import java.util.ArrayList;
@@ -14,85 +14,68 @@ class Room {
     }
     public String getRoomNumber() { return roomNumber; }
     public String getRoomType() { return roomType; }
-    public boolean isAvailable() { return available; }
-    public void setAvailable(boolean v) { available=v; }
+    public synchronized boolean isAvailable() { return available; }
+    public synchronized void setAvailable(boolean v) { available=v; }
 }
 
-class Booking {
-    private String bookingId;
-    private String guestName;
-    private Room room;
-    private String status;
-
-    public Booking(String id, String guest, Room room) {
-        bookingId=id; guestName=guest; this.room=room;
-        this.status="CONFIRMED";
-        room.setAvailable(false);
-    }
-    public String getBookingId() { return bookingId; }
-    public String getStatus() { return status; }
-    public Room getRoom() { return room; }
-
-    public void cancel() {
-        if (!status.equals("CONFIRMED")) {
-            System.out.println("Booking " + bookingId + " cannot be cancelled - status: " + status);
-            return;
-        }
-        status = "CANCELLED";
-        room.setAvailable(true); // Inventory rollback
-        System.out.println("Booking " + bookingId + " for " + guestName + " cancelled.");
-        System.out.println("Room " + room.getRoomNumber() + " is now available again.");
-    }
-
-    public void display() {
-        System.out.println("ID: " + bookingId + " | Guest: " + guestName
-                + " | Room: " + room.getRoomNumber() + " | Status: " + status);
-    }
-}
-
-class HotelSystem {
+class SharedInventory {
     private List<Room> rooms = new ArrayList<>();
-    private List<Booking> bookings = new ArrayList<>();
-    private int bCounter = 1;
 
-    public void addRoom(Room r) { rooms.add(r); }
+    public SharedInventory() {
+        rooms.add(new Room("101", "Single"));
+        rooms.add(new Room("102", "Single"));
+        rooms.add(new Room("201", "Double"));
+    }
 
-    public Booking book(String guest, String type) {
+    public synchronized Room findAndBook(String type, String guest) {
         for (Room r : rooms) {
             if (r.getRoomType().equalsIgnoreCase(type) && r.isAvailable()) {
-                Booking b = new Booking("BK" + String.format("%03d", bCounter++), guest, r);
-                bookings.add(b);
-                System.out.println("Booked: " + b.getBookingId());
-                return b;
+                r.setAvailable(false);
+                System.out.println(Thread.currentThread().getName() + ": " + guest + " booked room " + r.getRoomNumber());
+                return r;
             }
         }
-        System.out.println("No room available for type: " + type);
+        System.out.println(Thread.currentThread().getName() + ": " + guest + " - No room available!");
         return null;
     }
 
-    public void displayInventory() {
-        System.out.println("\n=== Room Inventory ===");
+    public void displayStatus() {
+        System.out.println("\n=== Room Status ===");
         for (Room r : rooms)
-            System.out.println(r.getRoomNumber() + " (" + r.getRoomType() + ") - " + (r.isAvailable() ? "Available" : "Occupied"));
+            System.out.println(r.getRoomNumber() + " - " + (r.isAvailable() ? "Available" : "Occupied"));
+    }
+}
+
+class BookingThread extends Thread {
+    private SharedInventory inventory;
+    private String guestName;
+    private String roomType;
+
+    public BookingThread(SharedInventory inv, String guest, String type) {
+        inventory=inv; guestName=guest; roomType=type;
+    }
+
+    @Override
+    public void run() {
+        try {
+            Thread.sleep((long)(Math.random()*100));
+        } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        inventory.findAndBook(roomType, guestName);
     }
 }
 
 public class Main {
-    public static void main(String[] args) {
-        HotelSystem hotel = new HotelSystem();
-        hotel.addRoom(new Room("101", "Single"));
-        hotel.addRoom(new Room("201", "Double"));
+    public static void main(String[] args) throws InterruptedException {
+        SharedInventory inventory = new SharedInventory();
 
-        hotel.displayInventory();
+        Thread t1 = new BookingThread(inventory, "Alice", "Single");
+        Thread t2 = new BookingThread(inventory, "Bob", "Single");
+        Thread t3 = new BookingThread(inventory, "Charlie", "Single");
+        Thread t4 = new BookingThread(inventory, "Diana", "Double");
 
-        Booking b1 = hotel.book("Alice", "Single");
-        Booking b2 = hotel.book("Bob", "Double");
+        t1.start(); t2.start(); t3.start(); t4.start();
+        t1.join(); t2.join(); t3.join(); t4.join();
 
-        hotel.displayInventory();
-
-        System.out.println("\n-- Cancelling booking --");
-        if (b1 != null) b1.cancel();
-
-        hotel.displayInventory();
+        inventory.displayStatus();
     }
 }
